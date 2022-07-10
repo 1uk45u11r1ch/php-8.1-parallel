@@ -230,6 +230,11 @@ PHP_METHOD(Events, poll)
     php_parallel_events_poll(events, return_value);
 }
 
+#if PHP_VERSION_ID >= 80100
+ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(php_parallel_events_count_arginfo, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+#endif
+
 PHP_METHOD(Events, count)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
@@ -247,7 +252,12 @@ zend_function_entry php_parallel_events_methods[] = {
     PHP_ME(Events, setBlocking, php_parallel_events_set_blocking_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, setTimeout,  php_parallel_events_set_timeout_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, poll,        php_parallel_events_poll_arginfo, ZEND_ACC_PUBLIC)
+#if PHP_VERSION_ID >= 80100
+    PHP_ME(Events, count,       php_parallel_events_count_arginfo, ZEND_ACC_PUBLIC)
+#endif
+#if PHP_VERSION_ID < 80100
     PHP_ME(Events, count,       php_parallel_no_args_arginfo, ZEND_ACC_PUBLIC)
+#endif
     PHP_FE_END
 };
 
@@ -269,12 +279,17 @@ PHP_MINIT_FUNCTION(PARALLEL_EVENTS)
     php_parallel_events_ce->create_object = php_parallel_events_create;
     php_parallel_events_ce->get_iterator  = php_parallel_events_loop_create;
     php_parallel_events_ce->ce_flags |= ZEND_ACC_FINAL;
+#if PHP_VERSION_ID >= 80100
+    php_parallel_events_ce->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE ;
+#endif
 
     #ifdef ZEND_ACC_NOT_SERIALIZABLE
         php_parallel_events_ce->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE;
     #else
-        php_parallel_events_ce->serialize = zend_class_serialize_deny;
-        php_parallel_events_ce->unserialize = zend_class_unserialize_deny;
+        #if PHP_VERSION_ID < 80100
+            php_parallel_events_ce->serialize = zend_class_serialize_deny;
+            php_parallel_events_ce->unserialize = zend_class_unserialize_deny;
+        #endif
     #endif
 
     zend_class_implements(php_parallel_events_ce, 1, zend_ce_countable);
